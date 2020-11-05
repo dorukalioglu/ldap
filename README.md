@@ -97,6 +97,8 @@ Now that slapd is running, you can set up your own directory. This can be done b
 dpkg-reconfigure slapd
 ```
 <br>
+
+
 | Config Question                       | Answer      | Explanation                                                                          |
 | ------------------------------------- | ----------- | ------------------------------------------------------------------------------------ |
 | Omit OpenLDAP server configuration?   | No          | This will start the configuration wizard.                                            |
@@ -106,6 +108,7 @@ dpkg-reconfigure slapd
 | Database backend to use:              | HDB         | Based on Oracle Berkeley Database (BDB) but more effective.                          |
 | Remove database when slapd is purged? | No          | Keep the database if OpenLDAP is uninstalled.                                        |
 | Move old database?                    | Yes         | Remove the old database so that it does not interfere with the new configuration.    |
+
 
 The dc=nodomain has now been replaced with dc=example,dc=com.
 
