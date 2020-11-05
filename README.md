@@ -13,6 +13,7 @@
   <a href="https://www.openldap.org/">
     <img src="https://www.openldap.org/images/headers/LDAPworm.gif" alt="Logo" width="240" height="240">
   </a>
+  <br>
   <a href="http://www.postfix.org">
     <img src="http://www.postfix.org/mysza.gif" alt="Logo" width="240" height="240">
   </a>
