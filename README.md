@@ -11,8 +11,8 @@
 <br />
 <p align="center">
   <a href="https://github.com/dorukalioglu/ldap">
-    <img src="images/ldap.png" alt="Logo" width="80" height="80">
-    <img src="images/postfix.png" alt="Logo" width="80" height="80">
+    <img src="images/ldap.png" alt="Logo" width="240" height="240">
+    <img src="images/postfix.png" alt="Logo" width="240" height="240">
   </a>
 
   <h3 align="center">YOUR_TITLE</h3>
