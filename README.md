@@ -77,14 +77,14 @@ lsof -Pni :389
 
 The configuration can be found in __/etc/ldap__ . Here’s a short explanation of the existing files/folders:
 <br>
-|LDAP Folder                |Explanation                                                    |
-|---------------------------|---------------------------------------------------------------|
-|sasl2/                     |Used for SASL authentication. Initially empty and unconfigured.|
-|schema/                    |Contains the included schema and ldif files.                   |
-|slapd.d/                   |The LDAP server’s configuration storage.                       |
-|slapd.d/cn=config          |Contains the server configuration and directory databases.     |
-|slapd.d/cn=config/cn=schema|Contains the currently loaded schemas.                         |
-|ldap.conf                  |Used to define system-wide defaults for LDAP clients.          |
+| LDAP Folder                 | Explanation                                                     |
+| --------------------------- | --------------------------------------------------------------- |
+| sasl2/                      | Used for SASL authentication. Initially empty and unconfigured. |
+| schema/                     | Contains the included schema and ldif files.                    |
+| slapd.d/                    | The LDAP server’s configuration storage.                        |
+| slapd.d/cn=config           | Contains the server configuration and directory databases.      |
+| slapd.d/cn=config/cn=schema | Contains the currently loaded schemas.                          |
+| ldap.conf                   | Used to define system-wide defaults for LDAP clients.           |
 
 The actual database, that is automatically built from this configuration, is stored in /var/lib/ldap.
 #### Custom Directory Creation
@@ -92,7 +92,7 @@ Now that slapd is running, you can set up your own directory. This can be done b
 ```sh
 dpkg-reconfigure slapd
 ```
-
+|x|x|x|
 |Omit OpenLDAP server configuration?  |No |This will start the configuration wizard.|
 |DNS domain name: |  example.com	| Name of your directory (this will result in a BaseDN of the form dc=example,dc=com).|
 |Organization name:	| example	| Name of your organization.|
