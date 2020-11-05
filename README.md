@@ -11,8 +11,9 @@
 <br />
 <p align="center">
   <a href="https://github.com/dorukalioglu/ldap">
-    <img src="images/ldap.png" alt="Logo" width="240" height="240">
-    <img src="images/postfix.png" alt="Logo" width="240" height="240">
+    <img src="https://www.openldap.org/images/headers/LDAPworm.gif" alt="Logo" width="240" height="240">
+    <img src="http://www.postfix.org/mysza.gif" alt="Logo" width="240" height="240">
+    <img src="https://www.dovecot.org/typo3conf/ext/dvc_content/Resources/Public/Images/dovecot_logo_vector.svg" alt="Logo" width="240" height="240">
   </a>
 
   <h3 align="center">LDAP Postfix and Dovecot Auth on Ubuntu 20.04</h3>
@@ -134,6 +135,7 @@ touch schema_convert.conf
 <br>
 The schema_convert.conf file contains the schema to be converted (and any dependencies):
 <br>
+
 ```sh
 include /etc/ldap/schema/core.schema
 include /etc/ldap/schema/cosine.schema
@@ -142,7 +144,7 @@ include /etc/ldap/schema/inetorgperson.schema
 include /etc/ldap/schema/postfix-book.schema
 include /etc/ldap/schema/postfix.schema
 ```
-
+<br>
 >**Note:**You can find postfix.schema on [here](https://geek.co.il/articles/postfix/postfix.schema).
 
 Start the conversion:
