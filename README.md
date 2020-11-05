@@ -29,6 +29,9 @@
 - [Getting Started](#getting-started)
   - [Installation](#installation)
     - [Custom Directory Creation](#custom-directory-creation)
+    - [A First Test](#a-first-test)
+    - [Directory Modification](#directory-modification)
+    - [Load an Additional Schemas](#load-an-additional-schemas)
 - [Usage](#usage)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
@@ -86,20 +89,82 @@ The configuration can be found in __/etc/ldap__ . Here’s a short explanation o
 | slapd.d/cn=config/cn=schema | Contains the currently loaded schemas.                          |
 | ldap.conf                   | Used to define system-wide defaults for LDAP clients.           |
 
+
 The actual database, that is automatically built from this configuration, is stored in /var/lib/ldap.
 #### Custom Directory Creation
 Now that slapd is running, you can set up your own directory. This can be done by hand (writing and importing LDIF files) or – on Ubuntu – with the Debian Packet Manager (dpkg). This however should only be used for a first-time setup.
 ```sh
 dpkg-reconfigure slapd
 ```
-|x|x|x|
-|Omit OpenLDAP server configuration?  |No |This will start the configuration wizard.|
-|DNS domain name: |  example.com	| Name of your directory (this will result in a BaseDN of the form dc=example,dc=com).|
-|Organization name:	| example	| Name of your organization.|
-|Administrator password:	|secret	|New password for the LDAP Administrator (cn=admin,dc=example,dc=com).|
-|Database backend to use:	|HDB	|Based on Oracle Berkeley Database (BDB) but more effective.|
-|Remove database when slapd is purged?	|No	|Keep the database if OpenLDAP is uninstalled.|
-|Move old database?	|Yes	|Remove the old database so that it does not interfere with the new configuration.|
+<br>
+| Config Question                       | Answer      | Explanation                                                                          |
+| ------------------------------------- | ----------- | ------------------------------------------------------------------------------------ |
+| Omit OpenLDAP server configuration?   | No          | This will start the configuration wizard.                                            |
+| DNS domain name:                      | example.com | Name of your directory (this will result in a BaseDN of the form dc=example,dc=com). |
+| Organization name:                    | example     | Name of your organization.                                                           |
+| Administrator password:               | secret      | New password for the LDAP Administrator (cn=admin,dc=example,dc=com).                |
+| Database backend to use:              | HDB         | Based on Oracle Berkeley Database (BDB) but more effective.                          |
+| Remove database when slapd is purged? | No          | Keep the database if OpenLDAP is uninstalled.                                        |
+| Move old database?                    | Yes         | Remove the old database so that it does not interfere with the new configuration.    |
+
+The dc=nodomain has now been replaced with dc=example,dc=com.
+
+#### A First Test
+This query should return two DNs: your directory (dc=example,dc=com) and your admin account (cn=admin,dc=example,dc=com).
+
+```sh
+ldapsearch -x -W -D cn=admin,dc=example,dc=com -b dc=example,dc=com -LLL
+```
+
+#### Directory Modification
+1. Modifying the config in /etc/ldap/slapd.d directly (not recommended!)
+2. Using the ldap-utils (ldapadd, ldapdelete, ldapmodify, …)
+3. Using a graphical user interface (i.e. Apache Directory Studio)
+
+#### Load an Additional Schemas
+To load a schema with ldapadd, it has to be in LDIF format, so it must be converted first. The conversion can be done with slapcat. You’ll need a config file and an output directory:
+```sh
+cd /etc/ldap/schema
+mkdir ldif_output
+touch schema_convert.conf
+```
+<br>
+The schema_convert.conf file contains the schema to be converted (and any dependencies):
+<br>
+```sh
+include /etc/ldap/schema/core.schema
+include /etc/ldap/schema/cosine.schema
+include /etc/ldap/schema/nis.schema
+include /etc/ldap/schema/inetorgperson.schema
+include /etc/ldap/schema/postfix-book.schema
+include /etc/ldap/schema/postfix.schema
+```
+
+>**Note:**You can find postfix.schema on [here](https://geek.co.il/articles/postfix/postfix.schema).
+
+Start the conversion:
+
+```sh
+slapcat -f schema_convert.conf -F ./ldif_output/ -n0
+```
+
+Copy the corresponding output file to /etc/ldap/schema:
+```sh
+cp /etc/ldap/schema/ldif_output/cn\=config/cn\=schema/cn\=\{4\}postfix-book.ldif /etc/ldap/schema/postfix-book.ldif
+```
+Finally, in the postfix-book.ldif, the following changes need to be made:
+  * dn: cn=postfix-book,cn=schema,cn=config
+  * cn: postfix-book
+  * Remove the metadata starting from structuralObjectClass
+
+Then add it to the directory as follows:
+```sh
+sudo ldapadd -Y EXTERNAL -H ldapi:/// -f postfix-book.ldif
+```
+
+The new attributes of PostfixBookMailAccount are available from now on.
+If not, try a restart (/etc/init.d slapd restart).
+
 <!-- USAGE EXAMPLES -->
 ## Usage
 
