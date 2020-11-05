@@ -40,10 +40,12 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-This project made for Authentication of `Ldap`, `Postfix` and `Dovecot`. **Basically installation of a mailserver.** 
-`Ubuntu 20.02`<br>
-`Users don’t have system accounts on the Unix machine`<br>
-`User accounts are virtual accounts stored in an LDAP`
+This project made for Authentication of `Lightweight Directory Access Protocol (LDAP)`, `Postfix` and `Dovecot`. **Basically installation of a mailserver**, in order for them to be connected to
+each other, and help with address lookup and aliases.
+<br>
+* []`Ubuntu 20.02`<br>
+* []`Users don’t have system accounts on the Unix machine`<br>
+* []`User accounts are virtual accounts stored in an LDAP`
 
 
 ### Built With
@@ -59,25 +61,28 @@ This project made for Authentication of `Ldap`, `Postfix` and `Dovecot`. **Basic
 
 To get a local copy up and running follow these simple steps.
 
-### Prerequisites
-
-This is an example of how to list things you need to use the software and how to install them.
-* npm
-```sh
-npm install npm@latest -g
-```
-
 ### Installation
 
-1. Clone the repo
+This is an example of how to list things you need to use the software and how to install them.
+* LDAP
 ```sh
-git clone https://github.com/github_username/repo_name.git
+apt-get install slapd ldap-utils
 ```
-2. Install NPM packages
+After installation, you can see running LDAP port on 389:
 ```sh
-npm install
-```
+lsof -Pni :389
+``` 
+<br>
+The configuration can be found in **/etc/ldap**. Here’s a short explanation of the existing files/folders:
 
+|LDAP Folder                |Explanation                                                    |
+|---------------------------|---------------------------------------------------------------|
+|sasl2/                     |Used for SASL authentication. Initially empty and unconfigured.|
+|schema/                    |Contains the included schema and ldif files.                   |
+|slapd.d/                   |The LDAP server’s configuration storage.                       |
+|slapd.d/cn=config          |Contains the server configuration and directory databases.     |
+|slapd.d/cn=config/cn=schema|Contains the currently loaded schemas.                         |
+|ldap.conf                  |Used to define system-wide defaults for LDAP clients.          |
 
 
 <!-- USAGE EXAMPLES -->
