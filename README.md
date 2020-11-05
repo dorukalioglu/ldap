@@ -28,6 +28,7 @@
   - [Built With](#built-with)
 - [Getting Started](#getting-started)
   - [Installation](#installation)
+    - [Custom Directory Creation](#custom-directory-creation)
 - [Usage](#usage)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
@@ -74,7 +75,7 @@ lsof -Pni :389
 ``` 
 <br>
 
-The configuration can be found in ** /etc/ldap ** . Here’s a short explanation of the existing files/folders:
+The configuration can be found in __/etc/ldap__ . Here’s a short explanation of the existing files/folders:
 <br>
 |LDAP Folder                |Explanation                                                    |
 |---------------------------|---------------------------------------------------------------|
@@ -85,7 +86,20 @@ The configuration can be found in ** /etc/ldap ** . Here’s a short explanation
 |slapd.d/cn=config/cn=schema|Contains the currently loaded schemas.                         |
 |ldap.conf                  |Used to define system-wide defaults for LDAP clients.          |
 
+The actual database, that is automatically built from this configuration, is stored in /var/lib/ldap.
+#### Custom Directory Creation
+Now that slapd is running, you can set up your own directory. This can be done by hand (writing and importing LDIF files) or – on Ubuntu – with the Debian Packet Manager (dpkg). This however should only be used for a first-time setup.
+```sh
+dpkg-reconfigure slapd
+```
 
+|Omit OpenLDAP server configuration?  |No |This will start the configuration wizard.|
+|DNS domain name: |  example.com	| Name of your directory (this will result in a BaseDN of the form dc=example,dc=com).|
+|Organization name:	| example	| Name of your organization.|
+|Administrator password:	|secret	|New password for the LDAP Administrator (cn=admin,dc=example,dc=com).|
+|Database backend to use:	|HDB	|Based on Oracle Berkeley Database (BDB) but more effective.|
+|Remove database when slapd is purged?	|No	|Keep the database if OpenLDAP is uninstalled.|
+|Move old database?	|Yes	|Remove the old database so that it does not interfere with the new configuration.|
 <!-- USAGE EXAMPLES -->
 ## Usage
 
