@@ -40,9 +40,9 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-This project made for Authentication of `Ldap`, `Postfix` and `Dovecot`. Basically installation of a mailserver. 
-`Ubuntu 20.02`
-`Users don’t have system accounts on the Unix machine`
+This project made for Authentication of `Ldap`, `Postfix` and `Dovecot`. **Basically installation of a mailserver.** 
+`Ubuntu 20.02`<br>
+`Users don’t have system accounts on the Unix machine`<br>
 `User accounts are virtual accounts stored in an LDAP`
 
 
