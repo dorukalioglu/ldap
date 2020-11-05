@@ -73,7 +73,7 @@ After installation, you can see running LDAP port on 389:
 lsof -Pni :389
 ``` 
 <br>
-The configuration can be found in **/etc/ldap**. Here’s a short explanation of the existing files/folders:
+The configuration can be found in <em>/etc/ldap</em>. Here’s a short explanation of the existing files/folders:
 
 |LDAP Folder                |Explanation                                                    |
 |---------------------------|---------------------------------------------------------------|
