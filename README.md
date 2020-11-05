@@ -10,9 +10,13 @@
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
-  <a href="https://github.com/dorukalioglu/ldap">
+  <a href="https://www.openldap.org/">
     <img src="https://www.openldap.org/images/headers/LDAPworm.gif" alt="Logo" width="240" height="240">
+  </a>
+  <a href="http://www.postfix.org">
     <img src="http://www.postfix.org/mysza.gif" alt="Logo" width="240" height="240">
+  </a>
+  <a href="https://www.dovecot.org">
     <img src="https://www.dovecot.org/typo3conf/ext/dvc_content/Resources/Public/Images/dovecot_logo_vector.svg" alt="Logo" width="240" height="240">
   </a>
 
@@ -28,17 +32,28 @@
 - [About The Project](#about-the-project)
   - [Built With](#built-with)
 - [Getting Started](#getting-started)
-  - [Installation](#installation)
+  - [LDAP](#ldap)
+    - [LDAP Installation](#ldap-installation)
     - [Custom Directory Creation](#custom-directory-creation)
     - [A First Test](#a-first-test)
     - [Directory Modification](#directory-modification)
     - [Load an Additional Schemas](#load-an-additional-schemas)
-- [Usage](#usage)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License](#license)
-- [Contact](#contact)
-- [Acknowledgements](#acknowledgements)
+    - [Adding Users by LDIF File](#adding-users-by-ldif-file)
+    - [LDAP Configuration for Test](#ldap-configuration-for-test)
+  - [Postfix](#postfix)
+    - [Postfix Installation](#postfix-installation)
+    - [Configuration](#configuration)
+    - [Hashmap Creation](#hashmap-creation)
+    - [Starting Postfix -->](#starting-postfix---)
+    - [SMTP Connection Test](#smtp-connection-test)
+    - [LDAP Lookup Test](#ldap-lookup-test)
+  - [Dovecot](#dovecot)
+    - [Dovecot Installation](#dovecot-installation)
+    - [Configuration](#configuration-1)
+    - [Starting Dovecot](#starting-dovecot)
+    - [IMAP Connection & Authentication Test](#imap-connection--authentication-test)
+    - [Postfix Integration](#postfix-integration)
+    - [Dovecot Deliver Test](#dovecot-deliver-test)
 
 
 
@@ -66,7 +81,11 @@ each other, and help with address lookup and aliases.
 
 To get a local copy up and running follow these simple steps.
 
-### Installation
+### LDAP 
+
+This is the directory service that stores the (virtual) user accounts for the mail server.
+
+#### LDAP Installation
 
 This is an example of how to list things you need to use the software and how to install them.
 * LDAP
@@ -144,9 +163,7 @@ include /etc/ldap/schema/inetorgperson.schema
 include /etc/ldap/schema/postfix-book.schema
 include /etc/ldap/schema/postfix.schema
 ```
-<br>
-
->**Note:**You can find postfix.schema on [here](https://geek.co.il/articles/postfix/postfix.schema).
+>**Note:**You can find postfix.schema on [here](https://geek.co.il/articles/postfix/postfix.schema). Also other contributed schemas available on [here](https://github.com/variablenix/ldap-mail-schema)
 
 Start the conversion:
 
@@ -171,74 +188,279 @@ sudo ldapadd -Y EXTERNAL -H ldapi:/// -f postfix-book.ldif
 The new attributes of PostfixBookMailAccount are available from now on.
 If not, try a restart (/etc/init.d slapd restart).
 
-<!-- USAGE EXAMPLES -->
-## Usage
+#### Adding Users by LDIF File
+Create a userimport.ldif with the following content to add a single user (the value for userPassword can be generated with slappasswd):
+```sh
+# Some User
+dn: uniqueIdentifier=test1,ou=people,dc=example,dc=com
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+objectClass: PostfixBookMailAccount
+objectClass: extensibleObject
+cn: Test1 User
+givenName: Test1
+mail: test1@example.com
+mailEnabled: TRUE
+mailGidNumber: 5000
+mailHomeDirectory: /srv/vmail/test1@example.com
+mailQuota: 10240
+mailStorageDirectory: maildir:/srv/vmail/test1@example.com/Maildir
+mailUidNumber: 5000
+sn: Test1
+uniqueIdentifier: test1
+userPassword: {SSHA}Ifz0oceGr1wwBP1BtBduPLTVbo6A2Qkd
+```
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+Then add it using this command:
+```sh
+ldapadd -W -D "cn=admin,dc=example,dc=com" -f userimport.ldif
+```
+>**Note**:You can get SSHA decrypted password by using `passwd`.
 
-_For more examples, please refer to the [Documentation](https://example.com)_
+#### LDAP Configuration for Test
+
+The BaseDN for this howto is “dc=example,dc=com” and it contains two organizationalUnits:
+
+  - “ou=people,dc=example,dc=com” for user accounts (RDN = uniqueIdentifier)
+  - “ou=services,dc=example,dc=com” for service accounts (RDN = uid)
+  - You’ll need accounts for postfix and dovecot
+
+LDAP structure should be like:
+<br>
+<img src="images/mailserver_ldap_config_01.png" width="25%" height="25%"><img src="images/mailserver_ldap_config_02.png" width="29%" height="29%">
+
+### Postfix 
+Postfix as MTA (Mail Transfer Agent). This is the SMTP server. It accepts incoming mail (after a successful LDAP lookup of the recipient address) and passes it to Dovecot. It forwards outgoing mail (after the user successfully authenticated) to the next responsible SMTP server.
+
+#### Postfix Installation
+Install Postfix and the extensions. During installation select the “No Configuration” option:
+```sh
+apt-get install postfix postfix-pcre postfix-ldap
+```
+Optionally, you can install extra tools for managing mailboxes (mutt) and sending testmails (swaks):
+
+```sh
+apt-get install mutt swaks
+```
+#### Configuration
+
+Before Postfix can be started, some configuration files need to be created in /etc/postfix:
+
+* [main.cf](src/main.cf) -> This is the main configuration file for Postfix
+* [virtual_domains](src/virtual_domains.cf) –> Contains the domains the server takes mails for
+* [ldap_virtual_recipients.cf](src/ldap_virtual_recipients.cf) –> LDAP query for recipient validation
+* [ldap_virtual_aliases.cf](src/ldap_virtual_aliases.cf) –> LDAP query to get aliases and forwarding addresses (mail forwarding can be achieved by putting the external address into the “email” field in the LDAP-Account and copying the main address from the “mail” field into a “mailAlias” field.)
+* [identitycheck.pcre](src/identitycheck.pcre) –> Regular expression to block clients that use your hostname
+* [drop.cidr](src/drop.cidr) –> Contains blacklisted IP addresses
+
+Since Dovecot and TLS are not configured yet, temporarily comment out the following lines in main.cf:
+
+- dovecot_destination_recipient_limit = 1
+- smtpd_tls_security_level = may
+- smtpd_tls_auth_only = yes
+- smtpd_tls_CAfile = /etc/postfix/certs/example-cacert.pem
+- smtpd_tls_cert_file = /etc/postfix/certs/mail_public_cert.pem
+- smtpd_tls_key_file = /etc/postfix/certs/mail_private_key.pem
+
+#### Hashmap Creation
+Certain maps (i.e. hashmaps) need to be converted to .db files before they can be used by Postfix. In main.cf the virtual_domains file is called as a hashmap, so it needs to be converted:
+
+```sh
+postmap hash:/etc/postfix/virtual_domains
+```
+
+#### Starting Postfix -->
+Start Postfix with the following command:  ```sh service postfix start ```
+
+Check if it is running:  ```sh lsof -Pni :25 ```
+
+Have a look at __/var/log/mail.log__ to see if there are any errors.
+
+#### SMTP Connection Test
+Use Telnet to connect to the SMTP server:  ```sh telnet 127.0.0.1 25 ```. When you are connected, send an ```sh EHLO client```. You should get the following response:
+>Trying 127.0.0.1... <br>
+>Connected to 127.0.0.1.<br>
+>Escape character is '^]'.<br>
+>220 mail.example.com ESMTP Postfix (Ubuntu)<br>
+>EHLO client<br>
+>250-mail.example.com<br>
+>250-PIPELINING<br>
+>250-SIZE 10240000<br>
+>250-ETRN<br>
+>250-AUTH DIGEST-MD5 NTLM CRAM-MD5 LOGIN PLAIN<br>
+>250-AUTH=DIGEST-MD5 NTLM CRAM-MD5 LOGIN PLAIN<br>
+>250-ENHANCEDSTATUSCODES<br>
+>250-8BITMIME<br>
+>250 DSN<br>
+>QUIT<br>
+>221 2.0.0 Bye<br>
+
+#### LDAP Lookup Test
+With this test you can find out if Postfix is able to query the LDAP server:
+```sh
+postmap -q alice@example.com ldap:/etc/postfix/ldap_virtual_recipients.cf
+postmap -q postmaster@example.com ldap:/etc/postfix/ldap_virtual_aliases.cf
+```
+Both of the above commands should return “alice@example.com”, because …
+- there is an LDAP entry with “mail = alice@example.com”, so it is a valid recipient and
+- there is an LDAP entry with “mailAlias = postmaster@example.com”, which is an alias address for “alice@example.com”.
+
+### Dovecot
+Dovecot as LDA (Local Delivery Agent). This is the POP3 and IMAP server. It accepts incoming mail from Postfix and stores it in virtual mailboxes. It is connected to the LDAP for user authentication and lookups.
+
+#### Dovecot Installation
+Install Dovecot and the necessary extensions. During installation, you will be asked if a certificate should be created. If you skip this, you can add your own certificate later.
+```
+apt-get install dovecot-core dovecot-imapd dovecot-pop3d dovecot-lmtpd dovecot-ldap
+```
+#### Configuration 
+Disable unwanted protocols (IMAPS and POP3S) by setting the ports to 0 in __/etc/dovecot/conf.d/10-master.conf__. Also, set the permissions, user and group for the authentication-userdb:
+```
+inet_listener imaps {
+    port = 0
+    #port = 993
+    #ssl = yes
+}
+inet_listener pop3s {
+    port = 0
+    #port = 995
+    #ssl = yes
+}
+unix_listener auth-userdb {
+    mode = 0600
+    user = vmail
+    group = vmail
+}
+```
+Define the desired authentication mechanisms in __/etc/dovecot/conf.d/10-auth.conf__, disable system-based authentication and enable LDAP-based authentication instead:
+```
+auth_mechanisms = plain login
+#!include auth-system.conf.ext
+!include auth-ldap.conf.ext
+```
+Set the LDAP-related parameters in /etc/dovecot/dovecot-ldap.conf.ext:
+```
+hosts = 127.0.0.1
+dn = uid=dovecot,ou=services,dc=example,dc=com
+dnpass = secret
+ldap_version = 3
+base = ou=people,dc=example,dc=com
+user_attrs = mailHomeDirectory=home,mailUidNumber=uid,mailGidNumber=gid,mailStorageDirectory=mail
+user_filter = (&(objectClass=PostfixBookMailAccount)(uniqueIdentifier=%n))
+pass_attrs = uniqueIdentifier=user,userPassword=password
+pass_filter = (&(objectClass=PostfixBookMailAccount)(uniqueIdentifier=%n))
+default_pass_scheme = CRYPT
+```
+Activate logging in /etc/dovecot/conf.d/10-logging.conf:
+```
+log_path = syslog
+syslog_facility = mail
+auth_debug = yes
+```
+
+Set the path to your certificates in /etc/dovecot/conf.d/10-ssl.conf:
+```
+ssl_cert = </etc/dovecot/mail_public_cert.pem
+ssl_key = </etc/dovecot/private/mail_private_key.pem
+```
+Add a system user and group named vmail with uid and gid 5000:
+```
+addgroup --system --gid 5000 vmail
+adduser --system --home /srv/vmail --uid 5000 --gid 5000 --disabled-password --disabled-login vmail
+```
+Make sure that __/srv/vmail__ has been created.
+#### Starting Dovecot
+Start Dovecot with ```service dovecot start``` and check if it is running with  ```lsof -Pni — port 110``` and __143__ should be open. If it isn’t running, check the logfiles (mail.log and syslog). If there are no errors in the log, start Dovecot in foreground mode to have the errors printed to the console:  dovecot -F.
+
+#### IMAP Connection & Authentication Test
+Use Telnet to connect to Dovecot’s IMAP Server: ```telnet 127.0.0.1 143```. Then send a login request ( ```1 login alice@example.com secret```) to see if authentication (plain) is working:
+
+```Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+* OK [CAPABILITY IMAP4rev1 LITERAL+ SASL-IR LOGIN-REFERRALS ID ENABLE IDLE STARTTLS AUTH=PLAIN AUTH=LOGIN] Dovecot (Ubuntu) ready.
+1 login alice@example.com secret
+1 OK [CAPABILITY IMAP4rev1 LITERAL+ SASL-IR LOGIN-REFERRALS ID ENABLE IDLE SORT SORT=DISPLAY THREAD=REFERENCES THREAD=REFS THREAD=ORDEREDSUBJECT MULTIAPPEND URL-PARTIAL CATENATE UNSELECT CHILDREN NAMESPACE UIDPLUS LIST-EXTENDED I18NLEVEL=1 CONDSTORE QRESYNC ESEARCH ESORT SEARCHRES WITHIN CONTEXT=SEARCH LIST-STATUS SPECIAL-USE BINARY MOVE] Logged in
+2 logout
+* BYE Logging out 
+```
+#### Postfix Integration
+Activate Dovecot Deliver in Postfix by adding these lines to /etc/postfix/master.cf:
+```
+dovecot   unix  -       n       n       -       -       pipe
+        flags=ODRhu user=vmail:vmail argv=/usr/lib/dovecot/deliver -e -f ${sender} -d ${recipient}
+```
+Set the postmaster address in /etc/dovecot/conf.d/15-lda.conf:
+```
+postmaster_address = postmaster@example.com
+```
+Restart Dovecot and Postfix:
+```
+service dovecot restart
+service postfix restart
+```
+#### Dovecot Deliver Test
+Send a testmail to alice@example.com using one of the following methods:
+
+```
+echo Testmail | sendmail -f bob@example.com alice@example.com 
+```
+```
+swaks --from bob@example.com --to alice@example.com --server 127.0.0.1:25
+```
+
+```
+telnet 127.0.0.1 25
+
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+220 mail.example.com ESMTP Postfix (Ubuntu)
+EHLO test.local
+250-mail.example.com
+250-PIPELINING
+250-SIZE 10240000
+250-ETRN
+250-AUTH DIGEST-MD5 NTLM CRAM-MD5 LOGIN PLAIN
+250-AUTH=DIGEST-MD5 NTLM CRAM-MD5 LOGIN PLAIN
+250-ENHANCEDSTATUSCODES
+250-8BITMIME
+250 DSN
+MAIL FROM:<bob@example.com>
+250 2.1.0 Ok
+RCPT TO:<alice@example.com>
+250 2.1.5 Ok
+DATA
+354 End data with <CR><LF>.<CR><LF>
+Testmail
+.
+250 2.0.0 Ok: queued as 51586A1146
+QUIT
+221 2.0.0 Bye
+```
+Check the log /var/log/mail.log and Alice’s mailbox:  ```mutt -f /srv/vmail/alice@example.com/Maildir/ ```
+
+
+**Note that** 
+Files and folders containing passwords:
+> /etc/postfix/ldap_virtual_aliases.cf <br>
+> /etc/postfix/ldap_virtual_recipients.cf<br>
+> /etc/dovecot/dovecot-ldap.conf.ext<br>
+> /etc/saslauthd.conf<br>
+> /var/www/html/roundcube/config/config.inc.php
+
+Folders containing private keys:
+> /etc/postfix/certs<br>
+> /etc/dovecot/private<br>
+> /etc/ssl/private (possibly for your Apache key)
 
 
 
-<!-- ROADMAP -->
-## Roadmap
-
-See the [open issues](https://github.com/github_username/repo_name/issues) for a list of proposed features (and known issues).
-
-
-
-<!-- CONTRIBUTING -->
-## Contributing
-
-Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-
-
-<!-- LICENSE -->
-## License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
-
-
-<!-- CONTACT -->
-## Contact
-
-Your Name - [@twitter_handle](https://twitter.com/twitter_handle) - email
-
-Project Link: [https://github.com/github_username/repo_name](https://github.com/github_username/repo_name)
-
-
-
-<!-- ACKNOWLEDGEMENTS -->
-## Acknowledgements
-
-* []()
-* []()
-* []()
 
 
 
 
-
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/github_username/repo.svg?style=flat-square
-[contributors-url]: https://github.com/github_username/repo/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/github_username/repo.svg?style=flat-square
-[forks-url]: https://github.com/github_username/repo/network/members
-[stars-shield]: https://img.shields.io/github/stars/github_username/repo.svg?style=flat-square
-[stars-url]: https://github.com/github_username/repo/stargazers
-[issues-shield]: https://img.shields.io/github/issues/github_username/repo.svg?style=flat-square
-[issues-url]: https://github.com/github_username/repo/issues
-[license-shield]: https://img.shields.io/github/license/github_username/repo.svg?style=flat-square
-[license-url]: https://github.com/github_username/repo/blob/master/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=flat-square&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/github_username
-[product-screenshot]: images/screenshot.png
+Source: <br>
+Mastering CentOS 7 Linux Server<br>
+http://acidx.net/wordpress/2014/06/installing-a-mailserver-with-postfix-dovecot-sasl-ldap-roundcube/ 
