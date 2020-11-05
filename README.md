@@ -15,20 +15,7 @@
     <img src="images/postfix.png" alt="Logo" width="240" height="240">
   </a>
 
-  <h3 align="center">YOUR_TITLE</h3>
-
-  <p align="center">
-    YOUR_SHORT_DESCRIPTION
-    <br />
-    <a href="https://github.com/github_username/repo_name"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/github_username/repo_name">View Demo</a>
-    ·
-    <a href="https://github.com/github_username/repo_name/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/github_username/repo_name/issues">Request Feature</a>
-  </p>
+  <h3 align="center">LDAP Postfix and Dovecot Auth on Ubuntu 20.04</h3>
 </p>
 
 
@@ -53,18 +40,17 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
-
-Here's a blank template to get started:
-**To avoid retyping too much info. Do a search and replace with your text editor for the following:**
-`github_username`, `repo_name`, `twitter_handle`, `email`
+This project made for Authentication of `Ldap`, `Postfix` and `Dovecot`. Basically installation of a mailserver. 
+`Ubuntu 20.02`
+`Users don’t have system accounts on the Unix machine`
+`User accounts are virtual accounts stored in an LDAP`
 
 
 ### Built With
 
-* []()
-* []()
-* []()
+* [OpenLDAP](https://www.openldap.org/)
+* [Postfix](http://www.postfix.org/)
+* [Dovecot](https://www.dovecot.org/)
 
 
 
