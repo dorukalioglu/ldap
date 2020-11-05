@@ -43,9 +43,9 @@
 This project made for Authentication of `Lightweight Directory Access Protocol (LDAP)`, `Postfix` and `Dovecot`. **Basically installation of a mailserver**, in order for them to be connected to
 each other, and help with address lookup and aliases.
 <br>
-* []`Ubuntu 20.02`<br>
-* []`Users don’t have system accounts on the Unix machine`<br>
-* []`User accounts are virtual accounts stored in an LDAP`
+* `Ubuntu 20.02`<br>
+* `Users don’t have system accounts on the Unix machine`<br>
+* `User accounts are virtual accounts stored in an LDAP`
 
 
 ### Built With
@@ -62,7 +62,7 @@ each other, and help with address lookup and aliases.
 To get a local copy up and running follow these simple steps.
 
 ### Installation
-
+<p>
 This is an example of how to list things you need to use the software and how to install them.
 * LDAP
 ```sh
@@ -84,7 +84,7 @@ The configuration can be found in **/etc/ldap**. Here’s a short explanation of
 |slapd.d/cn=config/cn=schema|Contains the currently loaded schemas.                         |
 |ldap.conf                  |Used to define system-wide defaults for LDAP clients.          |
 
-
+</p>
 <!-- USAGE EXAMPLES -->
 ## Usage
 
