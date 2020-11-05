@@ -62,7 +62,7 @@ each other, and help with address lookup and aliases.
 To get a local copy up and running follow these simple steps.
 
 ### Installation
-<p>
+
 This is an example of how to list things you need to use the software and how to install them.
 * LDAP
 ```sh
@@ -73,7 +73,7 @@ After installation, you can see running LDAP port on 389:
 lsof -Pni :389
 ``` 
 <br>
-The configuration can be found in <em>/etc/ldap</em>. Here’s a short explanation of the existing files/folders:
+The configuration can be found in **/etc/ldap**. Here’s a short explanation of the existing files/folders:
 
 |LDAP Folder                |Explanation                                                    |
 |---------------------------|---------------------------------------------------------------|
@@ -84,7 +84,7 @@ The configuration can be found in <em>/etc/ldap</em>. Here’s a short explanati
 |slapd.d/cn=config/cn=schema|Contains the currently loaded schemas.                         |
 |ldap.conf                  |Used to define system-wide defaults for LDAP clients.          |
 
-</p>
+
 <!-- USAGE EXAMPLES -->
 ## Usage
 
