@@ -23,17 +23,17 @@
 <!-- TABLE OF CONTENTS -->
 ## Table of Contents
 
-* [About the Project](#about-the-project)
-  * [Built With](#built-with)
-* [Getting Started](#getting-started)
-  * [Prerequisites](#prerequisites)
-  * [Installation](#installation)
-* [Usage](#usage)
-* [Roadmap](#roadmap)
-* [Contributing](#contributing)
-* [License](#license)
-* [Contact](#contact)
-* [Acknowledgements](#acknowledgements)
+- [Table of Contents](#table-of-contents)
+- [About The Project](#about-the-project)
+  - [Built With](#built-with)
+- [Getting Started](#getting-started)
+  - [Installation](#installation)
+- [Usage](#usage)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
+- [Acknowledgements](#acknowledgements)
 
 
 
@@ -73,8 +73,9 @@ After installation, you can see running LDAP port on 389:
 lsof -Pni :389
 ``` 
 <br>
-The configuration can be found in **/etc/ldap**. Here’s a short explanation of the existing files/folders:
 
+The configuration can be found in ** /etc/ldap ** . Here’s a short explanation of the existing files/folders:
+<br>
 |LDAP Folder                |Explanation                                                    |
 |---------------------------|---------------------------------------------------------------|
 |sasl2/                     |Used for SASL authentication. Initially empty and unconfigured.|
