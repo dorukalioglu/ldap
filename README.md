@@ -219,7 +219,7 @@ The BaseDN for this howto is “dc=example,dc=com” and it contains two organiz
 
 LDAP structure should be like:
 <br>
-<img src="images/mailserver_ldap_config_01.png" width="50%" height="50%"> &ensp; &ensp;<img src="images/mailserver_ldap_config_02.png" width="50%" height="50%">
+<img src="images/mailserver_ldap_config_01.png" width="100%" height="100%"> &ensp; &ensp;<img src="images/mailserver_ldap_config_02.png" width="100%" height="100%">
 
 ### Postfix 
 Postfix is the default Mail Transfer Agent (MTA) in Ubuntu. It attempts to be fast and secure, with flexibility in administration. It is compatible with the MTA sendmail.
