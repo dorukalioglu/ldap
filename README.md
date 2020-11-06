@@ -78,8 +78,6 @@ This project made for Authentication of `Lightweight Directory Access Protocol (
 <!-- GETTING STARTED -->
 ## Getting Started
 
-To get a local copy up and running follow these simple steps.
-
 ### LDAP 
 
 This is the directory service that stores the (virtual) user accounts for the mail server.
@@ -101,7 +99,7 @@ lsof -Pni :389
 ``` 
 <br>
 
-The configuration files can be found in __/etc/ldap__ .
+The configuration files and what are they used for, in __/etc/ldap__.
 <br>
 | LDAP Folder                 | Explanation                                                     |
 | --------------------------- | --------------------------------------------------------------- |
@@ -160,25 +158,24 @@ Use this line to add custom ldif file:
 sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/ldap/postfix.ldif
 ```
 The new attributes are avaiable from now on.
-If not, try a restart (/etc/init.d slapd restart).
+If not, try a restart (__/etc/init.d slapd restart__).
 
-- > To load a schema with ldapadd, it has to be in LDIF format, so it must be converted first. The conversion can be done with ```slapcat```. You’ll need a config file and an output directory:<br>
-```sh cd /etc/ldap/schema ```<br>
-```mkdir ldif_output```<br>
-```touch schema_convert.conf```
-- >The schema_convert.conf file contains the schema to be converted (and any dependencies):<br>
- ```include /etc/ldap/schema/core.schema```<br>
- ```include /etc/ldap/schema/cosine.schema```<br>
- ```include /etc/ldap/schema/nis.schema```<br>
- ```include /etc/ldap/schema/inetorgperson.schema```<br>
- ```include /etc/ldap/schema/postfix.schema```
-- >Start the conversion: <br>
+> To load a schema with ldapadd, it has to be in LDIF format, so it must be converted first. 
+> - The conversion can be done with ```slapcat```. You’ll need a config file and an output directory:<br>
+ ```cd /etc/ldap/schema```
+  ```mkdir ldif_output```
+  ```touch schema_convert.conf``` <br>
+> - The schema_convert.conf file contains the schema to be converted (and any dependencies):<br>
+  ```include /etc/ldap/schema/core.schema```<br>
+  ```include /etc/ldap/schema/cosine.schema```<br>
+  ```include /etc/ldap/schema/nis.schema```<br>
+  ```include /etc/ldap/schema/inetorgperson.schema```<br>
+  ```include /etc/ldap/schema/postfix.schema``` <br>
+> - Start the conversion: <br>
 ```slapcat -f schema_convert.conf -F ./ldif_output/ -n0``` <br>
 ```cp /etc/ldap/schema/ldif_output/cn\=config/cn\=schema/cn\=\{4\}postfix.ldif /etc/ldap/schema/postfix.ldif```
-- >Finally, in the postfix-book.ldif, the following changes need to be made:<br>
-  * dn: cn=postfix,cn=schema,cn=config<br>
-  * cn: postfix<br>
-  * Remove the lines starting from __structuralObjectClass__
+> - Finally, in the postfix-book.ldif, the following changes need to be made: <br>* dn: cn=postfix,cn=schema,cn=config<br>* cn: postfix<br>* Remove the lines starting from __structuralObjectClass__
+
 >**Note:**You can find postfix.schema on [here](https://geek.co.il/articles/postfix/postfix.schema). Also other contributed schemas available on [here](https://github.com/credativ/postfix-ldap-schema)
 
 
@@ -222,7 +219,7 @@ The BaseDN for this howto is “dc=example,dc=com” and it contains two organiz
 
 LDAP structure should be like:
 <br>
-<img src="images/mailserver_ldap_config_01.png" width="25%" height="25%"> &ensp; &ensp;<img src="images/mailserver_ldap_config_02.png" width="25%" height="25%">
+<img src="images/mailserver_ldap_config_01.png" width="50%" height="50%"> &ensp; &ensp;<img src="images/mailserver_ldap_config_02.png" width="50%" height="50%">
 
 ### Postfix 
 Postfix is the default Mail Transfer Agent (MTA) in Ubuntu. It attempts to be fast and secure, with flexibility in administration. It is compatible with the MTA sendmail.
@@ -298,7 +295,7 @@ Install Dovecot and the necessary extensions. During installation, you will be a
 apt-get install dovecot-core dovecot-imapd dovecot-pop3d dovecot-lmtpd dovecot-ldap
 ```
 #### Dovecot Configuration 
-The configuration is spread over several files in /etc/dovecot/ and /etc/dovecot/conf.d and contains some basic configuration blocks, which can be included by uncommenting them. ```doveconf -n``` will print the final configuraton build up out of all snippets. <br>
+The configuration is spread over several files in __/etc/dovecot/__ and __/etc/dovecot/conf.d__ and contains some basic configuration blocks, which can be included by uncommenting them. ```doveconf -n``` will print the final configuraton build up out of all snippets. <br>
 
 Disable unwanted protocols (IMAPS and POP3S) by setting the ports to 0 in __/etc/dovecot/conf.d/10-master.conf__. Also, set the permissions, user and group for the authentication-userdb:
 ```
@@ -386,12 +383,12 @@ Escape character is '^]'.
 * BYE Logging out 
 ```
 #### Postfix Integration
-Activate Dovecot Deliver in Postfix by adding these lines to /etc/postfix/master.cf:
+Activate Dovecot Deliver in Postfix by adding these lines to __/etc/postfix/master.cf__:
 ```
 dovecot   unix  -       n       n       -       -       pipe
         flags=ODRhu user=vmail:vmail argv=/usr/lib/dovecot/deliver -e -f ${sender} -d ${recipient}
 ```
-Set the postmaster address in /etc/dovecot/conf.d/15-lda.conf:
+Set the postmaster address in __/etc/dovecot/conf.d/15-lda.conf__:
 ```
 postmaster_address = postmaster@example.com
 ```
@@ -446,16 +443,16 @@ Postfix sends all log messages to __/var/log/mail.log__. However, error and warn
 
 **Note that** 
 Files and folders containing passwords:
-> /etc/postfix/ldap_virtual_aliases.cf <br>
-> /etc/postfix/ldap_virtual_recipients.cf<br>
-> /etc/dovecot/dovecot-ldap.conf.ext<br>
-> /etc/saslauthd.conf<br>
-> /var/www/html/roundcube/config/config.inc.php
+- /etc/postfix/ldap_virtual_aliases.cf <br>
+- /etc/postfix/ldap_virtual_recipients.cf<br>
+- /etc/dovecot/dovecot-ldap.conf.ext<br>
+- /etc/saslauthd.conf<br>
+- /var/www/html/roundcube/config/config.inc.php
 
 Folders containing private keys:
-> /etc/postfix/certs<br>
-> /etc/dovecot/private<br>
-> /etc/ssl/private (possibly for your Apache key)
+- /etc/postfix/certs<br>
+- /etc/dovecot/private<br>
+- /etc/ssl/private (possibly for your Apache key)
 
 >For some reason, I need to change ```/etc/dovecot/dovecot.conf``` file to get rid of errors:
 >```
