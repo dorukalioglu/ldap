@@ -60,6 +60,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
+<img src="images/ldap.png"> <br>
 This project made for Authentication of `Lightweight Directory Access Protocol (LDAP)`, `Postfix` and `Dovecot`. **Basically installation of a mailserver**, in order for them to be connected to each other, and help with address lookup and aliases.
 <br>
 * `Ubuntu 20.02`<br>
@@ -470,8 +471,6 @@ Folders containing private keys:
 >    }
 >}
 >```
-
-
 
 
 
