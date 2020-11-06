@@ -35,34 +35,32 @@
 - [Getting Started](#getting-started)
   - [LDAP](#ldap)
     - [LDAP Installation](#ldap-installation)
-    - [Custom Directory Creation](#custom-directory-creation)
-    - [A First Test](#a-first-test)
-    - [Directory Modification](#directory-modification)
+    - [Verify the LDAP Search](#verify-the-ldap-search)
+    - [Custom Directory Creation and Directory Modification](#custom-directory-creation-and-directory-modification)
     - [Load an Additional Schemas](#load-an-additional-schemas)
     - [Adding Users by LDIF File](#adding-users-by-ldif-file)
     - [LDAP Configuration for Test](#ldap-configuration-for-test)
   - [Postfix](#postfix)
     - [Postfix Installation](#postfix-installation)
-    - [Configuration](#configuration)
-    - [Hashmap Creation](#hashmap-creation)
-    - [Starting Postfix -->](#starting-postfix---)
+    - [Postfix Configuration](#postfix-configuration)
+    - [Starting Postfix](#starting-postfix)
     - [SMTP Connection Test](#smtp-connection-test)
     - [LDAP Lookup Test](#ldap-lookup-test)
   - [Dovecot](#dovecot)
     - [Dovecot Installation](#dovecot-installation)
-    - [Configuration](#configuration-1)
+    - [Dovecot Configuration](#dovecot-configuration)
     - [Starting Dovecot](#starting-dovecot)
     - [IMAP Connection & Authentication Test](#imap-connection--authentication-test)
     - [Postfix Integration](#postfix-integration)
     - [Dovecot Deliver Test](#dovecot-deliver-test)
+    - [Log Viewing](#log-viewing)
 
 
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-This project made for Authentication of `Lightweight Directory Access Protocol (LDAP)`, `Postfix` and `Dovecot`. **Basically installation of a mailserver**, in order for them to be connected to
-each other, and help with address lookup and aliases.
+This project made for Authentication of `Lightweight Directory Access Protocol (LDAP)`, `Postfix` and `Dovecot`. **Basically installation of a mailserver**, in order for them to be connected to each other, and help with address lookup and aliases.
 <br>
 * `Ubuntu 20.02`<br>
 * `Users don’t have system accounts on the Unix machine`<br>
@@ -85,11 +83,15 @@ To get a local copy up and running follow these simple steps.
 ### LDAP 
 
 This is the directory service that stores the (virtual) user accounts for the mail server.
+The LDAP directory needs to keep several information needed by Postfix and Dovecot to work.
+
+- Username & Password for authentication
+- __UID__ and __GID__ for managing permissions of the user's __maildir__
+- Location of the __maildir__
+- List of mail aliases for a given user to allow one user to have several mail adresses.
 
 #### LDAP Installation
 
-This is an example of how to list things you need to use the software and how to install them.
-* LDAP
 ```sh
 apt-get install slapd ldap-utils
 ```
@@ -99,7 +101,7 @@ lsof -Pni :389
 ``` 
 <br>
 
-The configuration can be found in __/etc/ldap__ . Here’s a short explanation of the existing files/folders:
+The configuration files can be found in __/etc/ldap__ .
 <br>
 | LDAP Folder                 | Explanation                                                     |
 | --------------------------- | --------------------------------------------------------------- |
@@ -112,13 +114,22 @@ The configuration can be found in __/etc/ldap__ . Here’s a short explanation o
 
 
 The actual database, that is automatically built from this configuration, is stored in /var/lib/ldap.
-#### Custom Directory Creation
-Now that slapd is running, you can set up your own directory. This can be done by hand (writing and importing LDIF files) or – on Ubuntu – with the Debian Packet Manager (dpkg). This however should only be used for a first-time setup.
+
+
+#### Verify the LDAP Search
+To verify the ldap server is configured successfully, you can use the below command and verify that the domain entry is present.
+
+```sh
+ldapsearch -x -W -D cn=admin,dc=example,dc=com -b dc=example,dc=com -LLL
+```
+#### Custom Directory Creation and Directory Modification
+
+You can set up your own directory by (writing and importing LDIF files) or with the Debian Packet Manager (dpkg). This should only be used for a first-time setup.
+
 ```sh
 dpkg-reconfigure slapd
 ```
 <br>
-
 
 | Config Question                       | Answer      | Explanation                                                                          |
 | ------------------------------------- | ----------- | ------------------------------------------------------------------------------------ |
@@ -130,64 +141,46 @@ dpkg-reconfigure slapd
 | Remove database when slapd is purged? | No          | Keep the database if OpenLDAP is uninstalled.                                        |
 | Move old database?                    | Yes         | Remove the old database so that it does not interfere with the new configuration.    |
 
-
 The dc=nodomain has now been replaced with dc=example,dc=com.
 
-#### A First Test
-This query should return two DNs: your directory (dc=example,dc=com) and your admin account (cn=admin,dc=example,dc=com).
-
-```sh
-ldapsearch -x -W -D cn=admin,dc=example,dc=com -b dc=example,dc=com -LLL
-```
-
-#### Directory Modification
-1. Modifying the config in /etc/ldap/slapd.d directly (not recommended!)
-2. Using the ldap-utils (ldapadd, ldapdelete, ldapmodify, …)
-3. Using a graphical user interface (i.e. Apache Directory Studio)
+You can modify directory with: 
+1. Using the ldap-utils (ldapadd, ldapdelete, ldapmodify, …)
+2. Using a graphical user interface (i.e. Apache Directory Studio)
 
 #### Load an Additional Schemas
-To load a schema with ldapadd, it has to be in LDIF format, so it must be converted first. The conversion can be done with slapcat. You’ll need a config file and an output directory:
+For sure, to use e-mail address on accounts, we need to provide the types:
+- attributetype mailacceptinggeneralid to list typical aliases for the local part of the address
+- attributetype maildrop for the final mail box destination used by Postfix
+- objectclass postfixUser to identify users who receive mail by Postfix
+
+> You can find the ldif file on [here](src/postfix.ldif). <br> &ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;&ensp;*Thanks to [Credativ](https://github.com/credativ/postfix-ldap-schema)*.
+
+Use this line to add custom ldif file:
 ```sh
-cd /etc/ldap/schema
-mkdir ldif_output
-touch schema_convert.conf
+sudo ldapadd -Y EXTERNAL -H ldapi:/// -f /etc/ldap/postfix.ldif
 ```
-<br>
-The schema_convert.conf file contains the schema to be converted (and any dependencies):
-<br>
-
-```sh
-include /etc/ldap/schema/core.schema
-include /etc/ldap/schema/cosine.schema
-include /etc/ldap/schema/nis.schema
-include /etc/ldap/schema/inetorgperson.schema
-include /etc/ldap/schema/postfix-book.schema
-include /etc/ldap/schema/postfix.schema
-```
->**Note:**You can find postfix.schema on [here](https://geek.co.il/articles/postfix/postfix.schema). Also other contributed schemas available on [here](https://github.com/variablenix/ldap-mail-schema)
-
-Start the conversion:
-
-```sh
-slapcat -f schema_convert.conf -F ./ldif_output/ -n0
-```
-
-Copy the corresponding output file to /etc/ldap/schema:
-```sh
-cp /etc/ldap/schema/ldif_output/cn\=config/cn\=schema/cn\=\{4\}postfix-book.ldif /etc/ldap/schema/postfix-book.ldif
-```
-Finally, in the postfix-book.ldif, the following changes need to be made:
-  * dn: cn=postfix-book,cn=schema,cn=config
-  * cn: postfix-book
-  * Remove the metadata starting from structuralObjectClass
-
-Then add it to the directory as follows:
-```sh
-sudo ldapadd -Y EXTERNAL -H ldapi:/// -f postfix-book.ldif
-```
-
-The new attributes of PostfixBookMailAccount are available from now on.
+The new attributes are avaiable from now on.
 If not, try a restart (/etc/init.d slapd restart).
+
+- > To load a schema with ldapadd, it has to be in LDIF format, so it must be converted first. The conversion can be done with ```slapcat```. You’ll need a config file and an output directory:<br>
+```sh cd /etc/ldap/schema ```<br>
+```mkdir ldif_output```<br>
+```touch schema_convert.conf```
+- >The schema_convert.conf file contains the schema to be converted (and any dependencies):<br>
+ ```include /etc/ldap/schema/core.schema```<br>
+ ```include /etc/ldap/schema/cosine.schema```<br>
+ ```include /etc/ldap/schema/nis.schema```<br>
+ ```include /etc/ldap/schema/inetorgperson.schema```<br>
+ ```include /etc/ldap/schema/postfix.schema```
+- >Start the conversion: <br>
+```slapcat -f schema_convert.conf -F ./ldif_output/ -n0``` <br>
+```cp /etc/ldap/schema/ldif_output/cn\=config/cn\=schema/cn\=\{4\}postfix.ldif /etc/ldap/schema/postfix.ldif```
+- >Finally, in the postfix-book.ldif, the following changes need to be made:<br>
+  * dn: cn=postfix,cn=schema,cn=config<br>
+  * cn: postfix<br>
+  * Remove the lines starting from __structuralObjectClass__
+>**Note:**You can find postfix.schema on [here](https://geek.co.il/articles/postfix/postfix.schema). Also other contributed schemas available on [here](https://github.com/credativ/postfix-ldap-schema)
+
 
 #### Adding Users by LDIF File
 Create a userimport.ldif with the following content to add a single user (the value for userPassword can be generated with slappasswd):
@@ -229,13 +222,13 @@ The BaseDN for this howto is “dc=example,dc=com” and it contains two organiz
 
 LDAP structure should be like:
 <br>
-<img src="images/mailserver_ldap_config_01.png" width="25%" height="25%"><img src="images/mailserver_ldap_config_02.png" width="29%" height="29%">
+<img src="images/mailserver_ldap_config_01.png" width="25%" height="25%"> &ensp; &ensp;<img src="images/mailserver_ldap_config_02.png" width="25%" height="25%">
 
 ### Postfix 
-Postfix as MTA (Mail Transfer Agent). This is the SMTP server. It accepts incoming mail (after a successful LDAP lookup of the recipient address) and passes it to Dovecot. It forwards outgoing mail (after the user successfully authenticated) to the next responsible SMTP server.
+Postfix is the default Mail Transfer Agent (MTA) in Ubuntu. It attempts to be fast and secure, with flexibility in administration. It is compatible with the MTA sendmail.
 
 #### Postfix Installation
-Install Postfix and the extensions. During installation select the “No Configuration” option:
+To install Postfix run the following command and during installation select the “No Configuration” option:
 ```sh
 apt-get install postfix postfix-pcre postfix-ldap
 ```
@@ -244,68 +237,57 @@ Optionally, you can install extra tools for managing mailboxes (mutt) and sendin
 ```sh
 apt-get install mutt swaks
 ```
-#### Configuration
 
-Before Postfix can be started, some configuration files need to be created in /etc/postfix:
+> __Note:__ If you have some access problems, set ```/etc/postfix/``` owner to ```postfix:postfix``` and its mode to ```0100```. 
+#### Postfix Configuration
+
+Before starting Postfix, some configuration files need to be created and edited in __/etc/postfix__. For an example, check the files:
 
 * [main.cf](src/main.cf) -> This is the main configuration file for Postfix
 * [virtual_domains](src/virtual_domains.cf) –> Contains the domains the server takes mails for
 * [ldap_virtual_recipients.cf](src/ldap_virtual_recipients.cf) –> LDAP query for recipient validation
-* [ldap_virtual_aliases.cf](src/ldap_virtual_aliases.cf) –> LDAP query to get aliases and forwarding addresses (mail forwarding can be achieved by putting the external address into the “email” field in the LDAP-Account and copying the main address from the “mail” field into a “mailAlias” field.)
+* [ldap_virtual_aliases.cf](src/ldap_virtual_aliases.cf) –> LDAP query to get aliases and forwarding addresses 
 * [identitycheck.pcre](src/identitycheck.pcre) –> Regular expression to block clients that use your hostname
 * [drop.cidr](src/drop.cidr) –> Contains blacklisted IP addresses
 
-Since Dovecot and TLS are not configured yet, temporarily comment out the following lines in main.cf:
+> __Note:__ You can use also ```dpkg-reconfigure postfix``` as a start. <br>
+> __Note: If any changes done in Postfix files, especially in main.cf, need to restart Postfix service!!!__
 
-- dovecot_destination_recipient_limit = 1
-- smtpd_tls_security_level = may
-- smtpd_tls_auth_only = yes
-- smtpd_tls_CAfile = /etc/postfix/certs/example-cacert.pem
-- smtpd_tls_cert_file = /etc/postfix/certs/mail_public_cert.pem
-- smtpd_tls_key_file = /etc/postfix/certs/mail_private_key.pem
+#### Starting Postfix
 
-#### Hashmap Creation
-Certain maps (i.e. hashmaps) need to be converted to .db files before they can be used by Postfix. In main.cf the virtual_domains file is called as a hashmap, so it needs to be converted:
-
-```sh
-postmap hash:/etc/postfix/virtual_domains
-```
-
-#### Starting Postfix -->
 Start Postfix with the following command:  ```sh service postfix start ```
 
 Check if it is running:  ```sh lsof -Pni :25 ```
 
-Have a look at __/var/log/mail.log__ to see if there are any errors.
+Have a look at __/var/log/mail.log__ to see if there are any errors. It's helps very nice to see error that you can't see.
 
 #### SMTP Connection Test
 Use Telnet to connect to the SMTP server:  ```sh telnet 127.0.0.1 25 ```. When you are connected, send an ```sh EHLO client```. You should get the following response:
 >Trying 127.0.0.1... <br>
->Connected to 127.0.0.1.<br>
->Escape character is '^]'.<br>
->220 mail.example.com ESMTP Postfix (Ubuntu)<br>
->EHLO client<br>
->250-mail.example.com<br>
->250-PIPELINING<br>
->250-SIZE 10240000<br>
->250-ETRN<br>
->250-AUTH DIGEST-MD5 NTLM CRAM-MD5 LOGIN PLAIN<br>
->250-AUTH=DIGEST-MD5 NTLM CRAM-MD5 LOGIN PLAIN<br>
->250-ENHANCEDSTATUSCODES<br>
->250-8BITMIME<br>
->250 DSN<br>
->QUIT<br>
->221 2.0.0 Bye<br>
+Connected to 127.0.0.1.<br>
+Escape character is '^]'.<br>
+220 mail.example.com ESMTP Postfix (Ubuntu)<br>
+EHLO client<br>
+250-mail.example.com<br>
+250-PIPELINING<br>
+250-SIZE 10240000<br>
+250-ETRN<br>
+250-AUTH DIGEST-MD5 NTLM CRAM-MD5 LOGIN PLAIN<br>
+250-AUTH=DIGEST-MD5 NTLM CRAM-MD5 LOGIN PLAIN<br>
+250-ENHANCEDSTATUSCODES<br>
+250-8BITMIME<br>
+250 DSN<br>
+QUIT<br>
+221 2.0.0 Bye<br>
 
 #### LDAP Lookup Test
-With this test you can find out if Postfix is able to query the LDAP server:
+
+You can test the mapping with the ```postmap``` command
 ```sh
 postmap -q alice@example.com ldap:/etc/postfix/ldap_virtual_recipients.cf
 postmap -q postmaster@example.com ldap:/etc/postfix/ldap_virtual_aliases.cf
 ```
-Both of the above commands should return “alice@example.com”, because …
-- there is an LDAP entry with “mail = alice@example.com”, so it is a valid recipient and
-- there is an LDAP entry with “mailAlias = postmaster@example.com”, which is an alias address for “alice@example.com”.
+Both of the above commands should return “alice@example.com”.
 
 ### Dovecot
 Dovecot as LDA (Local Delivery Agent). This is the POP3 and IMAP server. It accepts incoming mail from Postfix and stores it in virtual mailboxes. It is connected to the LDAP for user authentication and lookups.
@@ -315,7 +297,9 @@ Install Dovecot and the necessary extensions. During installation, you will be a
 ```
 apt-get install dovecot-core dovecot-imapd dovecot-pop3d dovecot-lmtpd dovecot-ldap
 ```
-#### Configuration 
+#### Dovecot Configuration 
+The configuration is spread over several files in /etc/dovecot/ and /etc/dovecot/conf.d and contains some basic configuration blocks, which can be included by uncommenting them. ```doveconf -n``` will print the final configuraton build up out of all snippets. <br>
+
 Disable unwanted protocols (IMAPS and POP3S) by setting the ports to 0 in __/etc/dovecot/conf.d/10-master.conf__. Also, set the permissions, user and group for the authentication-userdb:
 ```
 inet_listener imaps {
@@ -334,13 +318,13 @@ unix_listener auth-userdb {
     group = vmail
 }
 ```
-Define the desired authentication mechanisms in __/etc/dovecot/conf.d/10-auth.conf__, disable system-based authentication and enable LDAP-based authentication instead:
+Dovecot can use LDAP as a password database for authentication as well as a user database for information like the maildir location, and the UID and GID of the user. To activate LDAP as a password and user database, enable it in __/etc/dovecot/conf.d/10-auth.conf__ and disable __auth-system.conf.ext__.
 ```
 auth_mechanisms = plain login
 #!include auth-system.conf.ext
 !include auth-ldap.conf.ext
 ```
-Set the LDAP-related parameters in /etc/dovecot/dovecot-ldap.conf.ext:
+__/etc/dovecot/conf.d/auth-ldap.conf.ext__ should contain the declaration for __passdb__ and __userdb__. Set the LDAP-related parameters in __/etc/dovecot/dovecot-ldap.conf.ext__:
 ```
 hosts = 127.0.0.1
 dn = uid=dovecot,ou=services,dc=example,dc=com
@@ -352,25 +336,40 @@ user_filter = (&(objectClass=PostfixBookMailAccount)(uniqueIdentifier=%n))
 pass_attrs = uniqueIdentifier=user,userPassword=password
 pass_filter = (&(objectClass=PostfixBookMailAccount)(uniqueIdentifier=%n))
 default_pass_scheme = CRYPT
+
+passdb {
+  driver = ldap
+
+  # Path for LDAP configuration file, see example-config/dovecot-ldap.conf.ext
+  args = /etc/dovecot/dovecot-ldap.conf.ext
+}
+userdb {
+  driver = ldap
+  args = /etc/dovecot/dovecot-ldap.conf.ext
+  
+  # Default fields can be used to specify defaults that LDAP may override
+  #default_fields = home=/home/virtual/%u
+}
 ```
-Activate logging in /etc/dovecot/conf.d/10-logging.conf:
+Activate logging in __/etc/dovecot/conf.d/10-logging.conf__:
 ```
 log_path = syslog
 syslog_facility = mail
 auth_debug = yes
 ```
+The location of the Maildir is set in __/etc/dovecot/conf.d/10-mail.conf__. The user's homedirectory will be read from LDAP, and '/mailbox' will be appended with the following configuration:
+```
+maildir:~/mailbox
+```
 
-Set the path to your certificates in /etc/dovecot/conf.d/10-ssl.conf:
-```
-ssl_cert = </etc/dovecot/mail_public_cert.pem
-ssl_key = </etc/dovecot/private/mail_private_key.pem
-```
 Add a system user and group named vmail with uid and gid 5000:
 ```
 addgroup --system --gid 5000 vmail
 adduser --system --home /srv/vmail --uid 5000 --gid 5000 --disabled-password --disabled-login vmail
 ```
 Make sure that __/srv/vmail__ has been created.
+
+
 #### Starting Dovecot
 Start Dovecot with ```service dovecot start``` and check if it is running with  ```lsof -Pni — port 110``` and __143__ should be open. If it isn’t running, check the logfiles (mail.log and syslog). If there are no errors in the log, start Dovecot in foreground mode to have the errors printed to the console:  dovecot -F.
 
@@ -442,6 +441,8 @@ QUIT
 ```
 Check the log /var/log/mail.log and Alice’s mailbox:  ```mutt -f /srv/vmail/alice@example.com/Maildir/ ```
 
+#### Log Viewing
+Postfix sends all log messages to __/var/log/mail.log__. However, error and warning messages can sometimes get lost in the normal log output so they are also logged to __/var/log/mail__.err and __/var/log/mail.warn__ respectively.
 
 **Note that** 
 Files and folders containing passwords:
@@ -456,7 +457,22 @@ Folders containing private keys:
 > /etc/dovecot/private<br>
 > /etc/ssl/private (possibly for your Apache key)
 
-
+>For some reason, I need to change ```/etc/dovecot/dovecot.conf``` file to get rid of errors:
+>```
+>service stats {
+>    unix_listener stats-reader {
+>        user = vmail
+>        group = vmail
+>        mode = 0666
+>    }
+>
+>    unix_listener stats-writer {
+>        user = vmail
+>        group = vmail
+>        mode = 0666
+>    }
+>}
+>```
 
 
 
@@ -464,4 +480,3 @@ Folders containing private keys:
 
 Source: <br>
 - Mastering CentOS 7 Linux Server<br>
-- http://acidx.net/wordpress/2014/06/installing-a-mailserver-with-postfix-dovecot-sasl-ldap-roundcube/ 
